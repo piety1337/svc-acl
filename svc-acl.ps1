@@ -43,7 +43,7 @@ function Get-ServiceAcl {
         }
     }
  
-    # Make sure computer has 'sc.exe':
+    # Make sure the computer has 'sc.exe':
     $ServiceControlCmd = Get-Command "$env:SystemRoot\system32\sc.exe"
     if (-not $ServiceControlCmd) {
         throw "Could not find $env:SystemRoot\system32\sc.exe command!"
@@ -51,7 +51,8 @@ function Get-ServiceAcl {
  
     # Get-Service does the work looking up the service the user requested:
     Get-Service -Name $Name | ForEach-Object {
-         
+        $CurrentServiceName = $_.Name  # Store the service name
+
         # We might need this info in the catch block, so store it to a variable
         $CurrentName = $_.Name
  
@@ -63,35 +64,38 @@ function Get-ServiceAcl {
             $Dacl = New-Object System.Security.AccessControl.RawSecurityDescriptor($Sddl)
         }
         catch {
-            Write-Warning "Couldn't get security descriptor for service '$CurrentName': $Sddl"
+            Write-Warning "Couldn't get the security descriptor for service '$CurrentName': $Sddl"
             return
         }
  
         # Create the custom object with the note properties
-        $CustomObject = New-Object -TypeName PSObject -Property ([ordered] @{ Name = $_.Name
-                                                                              Dacl = $Dacl
-                                                                            })
+        $CustomObject = New-Object -TypeName PSObject -Property ([ordered] @{ 
+            "Service Name" = $CurrentServiceName  # Add the 'Service Name' property with the service name
+            Name = $_.Name
+            Dacl = $Dacl
+        })
  
         # Add the 'Access' property:
         $CustomObject | Add-Member -MemberType ScriptProperty -Name Access -Value {
             $this.Dacl.DiscretionaryAcl | ForEach-Object {
                 $CurrentDacl = $_
  
-                try {
-                    $IdentityReference = $CurrentDacl.SecurityIdentifier.Translate([System.Security.Principal.NTAccount])
+                $IdentityReference = $CurrentDacl.SecurityIdentifier.Translate([System.Security.Principal.NTAccount])
+ 
+                $IdentityReferenceString = $IdentityReference.Value
+                if ($IdentityReferenceString -eq "NT AUTHORITY\Authenticated Users") {
+                    # If the identity reference is "NT AUTHORITY\Authenticated Users," set the color to light blue
+                    $IdentityReferenceString = "[96m$IdentityReferenceString[0m"
                 }
-                catch {
-                    $IdentityReference = $CurrentDacl.SecurityIdentifier.Value
-                }
-                 
+ 
                 New-Object -TypeName PSObject -Property ([ordered] @{ 
-                                ServiceRights = [ServiceAccessFlags] $CurrentDacl.AccessMask
-                                AccessControlType = $CurrentDacl.AceType
-                                IdentityReference = $IdentityReference
-                                IsInherited = $CurrentDacl.IsInherited
-                                InheritanceFlags = $CurrentDacl.InheritanceFlags
-                                PropagationFlags = $CurrentDacl.PropagationFlags
-                                                                    })
+                    ServiceRights = [ServiceAccessFlags] $CurrentDacl.AccessMask
+                    AccessControlType = $CurrentDacl.AceType
+                    IdentityReference = $IdentityReferenceString
+                    IsInherited = $CurrentDacl.IsInherited
+                    InheritanceFlags = $CurrentDacl.InheritanceFlags
+                    PropagationFlags = $CurrentDacl.PropagationFlags
+                })
             }
         }
  
@@ -107,13 +111,28 @@ function Get-ServiceAcl {
 }
 
 # Read the list of service names from a file
-$serviceListFile = "C:\Tools\service_list.txt"  # Update with the actual path to your service list file
+$serviceListFile = "C:\Path\To\File\service_list.txt"  # Update with the actual path to your service list file
 
 if (Test-Path $serviceListFile) {
     $serviceNames = Get-Content $serviceListFile
 
+    $firstService = $true  # To check if it's the first service
+
+
     # Enumerate permissions for each service in the list and select and expand the 'Access' property
     $serviceNames | ForEach-Object {
+        # Add a separator line except for the first service
+        if (-not $firstService) {
+            Write-Host $separator
+        } else {
+            $firstService = $false
+        }
+
+        # Display the service name on top of each group with a bigger font
+		Write-Host ""
+	 	Write-Host ""
+        Write-Host "Service Name: $_" -ForegroundColor Green
+		Write-Host "=====================================================================================================================================" -ForegroundColor Green
         Get-ServiceAcl -Name $_ | Select-Object -ExpandProperty Access
     }
 } else {
