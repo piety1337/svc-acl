@@ -1,5 +1,5 @@
 # svc-acl
-PowerShell script that identifies Windows services with weak permissions.
+PowerShell script that enumerates Windows service ACLs for the purpose of identifying weak service permissions.
 
 Based on https://rohnspowershellblog.wordpress.com/2013/03/19/viewing-service-acls.
 
