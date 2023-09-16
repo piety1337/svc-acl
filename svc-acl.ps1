@@ -82,11 +82,14 @@ function Get-ServiceAcl {
  
                 $IdentityReference = $CurrentDacl.SecurityIdentifier.Translate([System.Security.Principal.NTAccount])
  
-                $IdentityReferenceString = $IdentityReference.Value
-                if ($IdentityReferenceString -eq "NT AUTHORITY\Authenticated Users") {
-                    # If the identity reference is "NT AUTHORITY\Authenticated Users," set the color to light blue
-                    $IdentityReferenceString = "[96m$IdentityReferenceString[0m"
-                }
+				$IdentityReferenceString = $IdentityReference.Value
+				if ($IdentityReferenceString -eq "NT AUTHORITY\Authenticated Users") {
+					# If the identity reference is "NT AUTHORITY\Authenticated Users," set the color to light blue
+					$IdentityReferenceString = "[96m$IdentityReferenceString[0m"
+				} elseif ($IdentityReferenceString -eq "Everyone" -or $IdentityReferenceString -eq "BUILTIN\Users") {
+					# If the identity reference is "Everyone" or "BUILTIN\Users," set the color to light blue
+					$IdentityReferenceString = "[96m$IdentityReferenceString[0m"
+				}
  
                 New-Object -TypeName PSObject -Property ([ordered] @{ 
                     ServiceRights = [ServiceAccessFlags] $CurrentDacl.AccessMask
@@ -111,7 +114,7 @@ function Get-ServiceAcl {
 }
 
 # Read the list of service names from a file
-$serviceListFile = "C:\Path\To\File\service_list.txt"  # Update with the actual path to your service list file
+$serviceListFile = "C:\Users\massa\Desktop\service_list.txt"  # Update with the actual path to your service list file
 
 if (Test-Path $serviceListFile) {
     $serviceNames = Get-Content $serviceListFile
