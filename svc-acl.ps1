@@ -114,7 +114,7 @@ function Get-ServiceAcl {
 }
 
 # Read the list of service names from a file
-$serviceListFile = "C:\Users\massa\Desktop\service_list.txt"  # Update with the actual path to your service list file
+$serviceListFile = "C:\Path\To\File\service_list.txt"  # Update with the actual path to your service list file
 
 if (Test-Path $serviceListFile) {
     $serviceNames = Get-Content $serviceListFile
